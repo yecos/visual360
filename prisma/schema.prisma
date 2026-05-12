@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TourProject {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  thumbnail   String?
+  isPublic    Boolean  @default(false)
+  shareSlug   String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  floors      Floor[]
+  branding    Branding?
+  walkthrough Walkthrough?
+}
+
+model Floor {
+  id        String      @id @default(cuid())
+  name      String
+  order     Int
+  planImage String?
+  projectId String
+  project   TourProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  points    TourPoint[]
+}
+
+model TourPoint {
+  id           String   @id @default(cuid())
+  name         String
+  x            Float
+  y            Float
+  panoramaUrl  String
+  panoramaType String   @default("image")
+  pitch        Float    @default(0)
+  yaw          Float    @default(0)
+  fov          Float    @default(75)
+  floorId      String
+  floor        Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  fromConnections Connection[] @relation("FromConnections")
+  toConnections   Connection[] @relation("ToConnections")
+}
+
+model Connection {
+  id        String    @id @default(cuid())
+  fromId    String
+  toId      String
+  fromPoint TourPoint @relation("FromConnections", fields: [fromId], references: [id], onDelete: Cascade)
+  toPoint   TourPoint @relation("ToConnections", fields: [toId], references: [id], onDelete: Cascade)
+}
+
+model Branding {
+  id           String   @id @default(cuid())
+  logo         String?
+  primaryColor String   @default("#3B82F6")
+  companyName  String?
+  contactInfo  String?
+  projectId    String   @unique
+  project      TourProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Walkthrough {
+  id           String   @id @default(cuid())
+  pointIds     String   @default("[]")
+  autoplay     Boolean  @default(false)
+  interval     Int      @default(5)
+  narrationUrl String?
+  projectId    String   @unique
+  project      TourProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id       String        @id @default(cuid())
+  name     String?
+  email    String        @unique
+  password String?
+  projects TourProject[]
+  accounts Account[]
+  sessions Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String  @id @default(cuid())
+  sessionToken String  @unique
+  userId       String
+  expires      DateTime
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
