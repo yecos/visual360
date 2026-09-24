@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await db.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.trim().toLowerCase() },
         });
 
         if (!user || !user.password) {
@@ -70,7 +70,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET ?? "dev-secret-change-in-production",
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
