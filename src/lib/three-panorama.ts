@@ -31,6 +31,7 @@ export class PanoramaRenderer {
   private onPointerDownMouseX = 0;
   private onPointerDownMouseY = 0;
   private fov = 75;
+  private cameraTarget = new THREE.Vector3(0, 0, 0);
 
   // Touch support
   private touchStartDistance = 0;
@@ -62,7 +63,6 @@ export class PanoramaRenderer {
     // Camera setup
     const aspect = container.clientWidth / container.clientHeight;
     this.camera = new THREE.PerspectiveCamera(this.fov, aspect, 0.1, 1100);
-    this.camera.target = new THREE.Vector3(0, 0, 0);
 
     // Renderer setup
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -120,7 +120,7 @@ export class PanoramaRenderer {
         (texture) => {
           texture.colorSpace = THREE.SRGBColorSpace;
           const material = new THREE.MeshBasicMaterial({ map: texture });
-          this.sphere.material.dispose();
+          this.disposeMaterial(this.sphere.material);
           this.sphere.material = material;
           resolve();
         },
@@ -259,10 +259,18 @@ export class PanoramaRenderer {
     this.removeHotspots();
 
     this.sphere.geometry.dispose();
-    (this.sphere.material as THREE.Material).dispose();
+    this.disposeMaterial(this.sphere.material);
 
     this.renderer.dispose();
     this.container.removeChild(this.renderer.domElement);
+  }
+
+  private disposeMaterial(material: THREE.Material | THREE.Material[]): void {
+    if (Array.isArray(material)) {
+      material.forEach((item) => item.dispose());
+      return;
+    }
+    material.dispose();
   }
 
   // ─── Private: Event Handlers ────────────────────────────────────────────
@@ -371,12 +379,11 @@ export class PanoramaRenderer {
     const phi = THREE.MathUtils.degToRad(90 - this.lat);
     const theta = THREE.MathUtils.degToRad(this.lon);
 
-    const target = this.camera.target!;
-    target.x = 500 * Math.sin(phi) * Math.cos(theta);
-    target.y = 500 * Math.cos(phi);
-    target.z = 500 * Math.sin(phi) * Math.sin(theta);
+    this.cameraTarget.x = 500 * Math.sin(phi) * Math.cos(theta);
+    this.cameraTarget.y = 500 * Math.cos(phi);
+    this.cameraTarget.z = 500 * Math.sin(phi) * Math.sin(theta);
 
-    this.camera.lookAt(target);
+    this.camera.lookAt(this.cameraTarget);
 
     // Make hotspots always face the camera
     this.hotspots.forEach(({ mesh }) => {
