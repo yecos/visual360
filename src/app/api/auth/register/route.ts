@@ -18,9 +18,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!password || typeof password !== "string" || password.length < 6) {
+    if (!password || typeof password !== "string" || password.length < 8) {
       return NextResponse.json(
-        { error: "Password is required and must be at least 6 characters" },
+        { error: "Password is required and must be at least 8 characters" },
         { status: 400 }
       );
     }
