@@ -2,18 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  reactStrictMode: false,
-  async rewrites() {
-    return [
+  reactStrictMode: true,
+  poweredByHeader: false,
+  images: {
+    remotePatterns: [
       {
-        source: "/uploads/:path*",
-        destination: "/uploads/:path*",
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
       },
-    ];
+    ],
   },
 };
 
