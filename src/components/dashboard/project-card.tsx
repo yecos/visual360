@@ -1,10 +1,25 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MapPin, Building2, MoreVertical, Pencil, Trash2, Eye, Share2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  ArrowUpRight,
+  Building2,
+  Eye,
+  Layers3,
+  MapPin,
+  MoreHorizontal,
+  Pencil,
+  Share2,
+  Trash2,
+} from 'lucide-react';
 import type { TourProject } from '@/lib/store/tour-project-store';
 
 interface ProjectCardProps {
@@ -15,114 +30,133 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onOpen, onDelete, onShare }: ProjectCardProps) {
-  const totalPoints = project.floors.reduce((sum, f) => sum + f.points.length, 0);
-  const totalConnections = project.floors.reduce((sum, f) => sum + f.connections.length, 0);
+  const totalPoints = project.floors.reduce((sum, floor) => sum + floor.points.length, 0);
+  const totalConnections = project.floors.reduce(
+    (sum, floor) => sum + floor.connections.length,
+    0
+  );
 
   return (
-    <Card
-      className="group relative cursor-pointer transition-all hover:shadow-md hover:border-primary/20"
+    <article
+      className="group relative overflow-hidden rounded-[28px] border border-black/5 bg-white shadow-[0_20px_70px_-40px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_90px_-38px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-zinc-950"
       onClick={() => onOpen(project.id)}
     >
-      {/* Thumbnail area */}
-      <div className="relative h-40 bg-gradient-to-br from-muted to-muted/60 rounded-t-xl overflow-hidden">
+      <div className="relative aspect-[16/10] cursor-pointer overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(120,113,108,0.18),_transparent_42%),linear-gradient(145deg,#f6f4ef,#e7e2d8)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.08),_transparent_40%),linear-gradient(145deg,#18181b,#09090b)]">
         {project.thumbnail ? (
           <img
             src={project.thumbnail}
             alt={project.name}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.035]"
           />
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <Building2 className="size-12 opacity-30" />
-              <span className="text-xs opacity-50">No thumbnail</span>
+          <div className="flex h-full items-center justify-center">
+            <div className="flex flex-col items-center gap-3 text-zinc-500">
+              <div className="rounded-2xl border border-black/5 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+                <Building2 className="size-8" />
+              </div>
+              <span className="text-xs font-medium uppercase tracking-[0.18em]">
+                Sin portada
+              </span>
             </div>
           </div>
         )}
 
-        {/* Overlay on hover */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button size="sm" variant="secondary" className="gap-1.5">
-              <Pencil className="size-3.5" />
-              Open Editor
-            </Button>
-          </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent opacity-70 transition-opacity duration-300 group-hover:opacity-90" />
+
+        <div className="absolute left-4 top-4 flex items-center gap-2">
+          <Badge className="border-white/20 bg-black/30 text-white backdrop-blur-md hover:bg-black/30">
+            {project.floors.length} {project.floors.length === 1 ? 'nivel' : 'niveles'}
+          </Badge>
+          {project.isPublic && (
+            <Badge className="border-emerald-300/20 bg-emerald-500/20 text-emerald-50 backdrop-blur-md hover:bg-emerald-500/20">
+              <Eye className="mr-1 size-3" />
+              Público
+            </Badge>
+          )}
         </div>
 
-        {/* Actions dropdown */}
-        <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="absolute right-4 top-4"
+          onClick={(event) => event.stopPropagation()}
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="secondary"
                 size="icon"
-                className="size-8 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm"
+                className="size-9 rounded-full border border-white/20 bg-black/35 text-white shadow-sm backdrop-blur-md hover:bg-black/50 hover:text-white"
+                aria-label="Abrir acciones del proyecto"
               >
-                <MoreVertical className="size-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => onOpen(project.id)}>
-                <Pencil className="size-4 mr-2" />
-                Edit
+                <Pencil className="mr-2 size-4" />
+                Abrir editor
               </DropdownMenuItem>
               {project.isPublic && project.shareSlug && (
                 <DropdownMenuItem onClick={() => onShare(project.id)}>
-                  <Share2 className="size-4 mr-2" />
-                  Copy Share Link
+                  <Share2 className="mr-2 size-4" />
+                  Copiar enlace
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete(project.id)}
               >
-                <Trash2 className="size-4 mr-2" />
-                Delete
+                <Trash2 className="mr-2 size-4" />
+                Eliminar
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Status badge */}
-        {project.isPublic && (
-          <Badge
-            variant="secondary"
-            className="absolute top-2 left-2 bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
-          >
-            <Eye className="size-3 mr-1" />
-            Public
-          </Badge>
-        )}
+        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/65">
+              Tour 360
+            </p>
+            <h3 className="truncate text-lg font-semibold tracking-tight text-white">
+              {project.name}
+            </h3>
+          </div>
+          <div className="grid size-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-md transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+            <ArrowUpRight className="size-4" />
+          </div>
+        </div>
       </div>
 
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base line-clamp-1">{project.name}</CardTitle>
-        {project.description && (
-          <CardDescription className="line-clamp-2 text-xs">
+      <div className="cursor-pointer p-5">
+        {project.description ? (
+          <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
             {project.description}
-          </CardDescription>
+          </p>
+        ) : (
+          <p className="min-h-10 text-sm leading-5 text-muted-foreground/65">
+            Proyecto listo para agregar panoramas, puntos y navegación.
+          </p>
         )}
-      </CardHeader>
 
-      <CardContent className="pt-0">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Building2 className="size-3" />
-            {project.floors.length} floor{project.floors.length !== 1 ? 's' : ''}
-          </span>
-          <span className="flex items-center gap-1">
-            <MapPin className="size-3" />
-            {totalPoints} point{totalPoints !== 1 ? 's' : ''}
-          </span>
-          {totalConnections > 0 && (
-            <span className="flex items-center gap-1">
-              <Share2 className="size-3" />
-              {totalConnections}
-            </span>
-          )}
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <div className="rounded-2xl bg-zinc-50 px-3 py-3 dark:bg-white/[0.04]">
+            <Layers3 className="mb-2 size-4 text-zinc-500" />
+            <div className="text-sm font-semibold">{project.floors.length}</div>
+            <div className="text-[11px] text-muted-foreground">Niveles</div>
+          </div>
+          <div className="rounded-2xl bg-zinc-50 px-3 py-3 dark:bg-white/[0.04]">
+            <MapPin className="mb-2 size-4 text-zinc-500" />
+            <div className="text-sm font-semibold">{totalPoints}</div>
+            <div className="text-[11px] text-muted-foreground">Puntos</div>
+          </div>
+          <div className="rounded-2xl bg-zinc-50 px-3 py-3 dark:bg-white/[0.04]">
+            <Share2 className="mb-2 size-4 text-zinc-500" />
+            <div className="text-sm font-semibold">{totalConnections}</div>
+            <div className="text-[11px] text-muted-foreground">Enlaces</div>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </article>
   );
 }
