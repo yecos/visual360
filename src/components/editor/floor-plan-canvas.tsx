@@ -5,7 +5,7 @@ import { Upload, ZoomIn, ZoomOut, Maximize, MapPin, ImageOff } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTourProjectStore } from '@/lib/store/tour-project-store';
-import { saveFile, fileToBase64, base64ToDataURL } from '@/lib/storage';
+import { saveFile } from '@/lib/storage';
 
 interface FloorPlanCanvasProps {
   onPointSelect?: (pointId: string) => void;
@@ -314,12 +314,14 @@ export function FloorPlanCanvas({ onPointSelect }: FloorPlanCanvasProps) {
       if (!file || !project || !selectedFloorId) return;
 
       try {
-        const base64 = await fileToBase64(file);
-        const dataUrl = base64ToDataURL(base64, file.type);
+        const planImage = await saveFile(
+          project.id,
+          `floorplan-${selectedFloorId}`,
+          file
+        );
         useTourProjectStore.getState().updateFloor(selectedFloorId, {
-          planImage: dataUrl,
+          planImage,
         });
-        await saveFile(project.id, `floorplan-${selectedFloorId}`, base64, file.type, file.name);
       } catch (error) {
         console.error('Failed to upload floor plan:', error);
       }
