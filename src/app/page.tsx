@@ -11,8 +11,11 @@ import {
   Plus,
   Search,
   Sparkles,
+  LogOut,
+  UserRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { signOut, useSession } from 'next-auth/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +37,7 @@ import type { TourProject } from '@/lib/store/tour-project-store';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { createProject } = useTourProjectStore();
 
   const [projects, setProjects] = useState<TourProject[]>([]);
@@ -57,8 +61,15 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    void loadProjects();
-  }, [loadProjects]);
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+      return;
+    }
+
+    if (status === 'authenticated') {
+      void loadProjects();
+    }
+  }, [loadProjects, router, status]);
 
   const stats = useMemo(() => {
     const totalFloors = projects.reduce((sum, project) => sum + project.floors.length, 0);
@@ -173,7 +184,23 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-zinc-600 shadow-sm dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-300 sm:flex">
+              <UserRound className="size-3.5" />
+              <span className="max-w-[180px] truncate">
+                {session?.user?.name || session?.user?.email || 'Usuario'}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              aria-label="Cerrar sesión"
+              onClick={() => void signOut({ callbackUrl: '/login' })}
+            >
+              <LogOut className="size-4" />
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="h-10 rounded-full bg-zinc-950 px-4 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200">
                 <Plus className="mr-2 size-4" />
@@ -220,7 +247,8 @@ export default function DashboardPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
       </header>
 
