@@ -37,28 +37,28 @@ interface FloorDB {
 }
 
 interface BrandingDB {
-  id: string;
-  logo: string | null;
+  id?: string;
+  logo?: string;
   primaryColor: string;
-  companyName: string | null;
-  contactInfo: string | null;
+  companyName?: string;
+  contactInfo?: string;
 }
 
 interface WalkthroughDB {
-  id: string;
-  pointIds: string;
+  id?: string;
+  pointIds: string[];
   autoplay: boolean;
   interval: number;
-  narrationUrl: string | null;
+  narrationUrl?: string;
 }
 
 interface TourData {
   id: string;
   name: string;
-  description: string | null;
-  thumbnail: string | null;
+  description?: string;
+  thumbnail?: string;
   isPublic: boolean;
-  shareSlug: string | null;
+  shareSlug?: string;
   floors: FloorDB[];
   branding: BrandingDB | null;
   walkthrough: WalkthroughDB | null;
