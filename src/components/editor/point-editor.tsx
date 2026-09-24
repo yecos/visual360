@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useTourProjectStore } from '@/lib/store/tour-project-store';
-import { savePanorama, fileToBase64, base64ToDataURL } from '@/lib/storage';
+import { savePanorama } from '@/lib/storage';
 
 interface PointEditorProps {
   onPanoramaView?: () => void;
@@ -45,13 +45,10 @@ export function PointEditor({ onPanoramaView }: PointEditorProps) {
 
       try {
         setUploading(true);
-        const base64 = await fileToBase64(file);
-        const dataUrl = base64ToDataURL(base64, file.type);
-
-        await savePanorama(project.id, selectedPoint.id, base64, file.type, file.name);
+        const panoramaUrl = await savePanorama(project.id, selectedPoint.id, file);
 
         updatePoint(selectedFloorId!, selectedPoint.id, {
-          panoramaUrl: dataUrl,
+          panoramaUrl,
           panoramaType: file.type.startsWith('video') ? 'video' : 'image',
         });
 
