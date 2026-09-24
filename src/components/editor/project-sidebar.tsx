@@ -75,13 +75,27 @@ export function ProjectSidebar({ onOpenBranding, onOpenWalkthrough }: ProjectSid
     }
   }, [project]);
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
     if (!project) return;
-    const slug = project.shareSlug || project.id;
-    useTourProjectStore.getState().updateProjectInfo({ shareSlug: slug, isPublic: true });
-    const url = `${window.location.origin}/viewer/${slug}`;
-    navigator.clipboard.writeText(url);
-    toast.success('Share link copied to clipboard');
+
+    try {
+      const slug = project.shareSlug || project.id;
+      useTourProjectStore.getState().updateProjectInfo({
+        shareSlug: slug,
+        isPublic: true,
+      });
+
+      const publishedProject = useTourProjectStore.getState().project;
+      if (!publishedProject) return;
+
+      await saveProject(publishedProject);
+      const url = `${window.location.origin}/tour/${slug}`;
+      await navigator.clipboard.writeText(url);
+      toast.success('Tour publicado y enlace copiado');
+    } catch (error) {
+      console.error('Failed to publish project:', error);
+      toast.error('No fue posible publicar el tour');
+    }
   }, [project]);
 
   const handleStartEdit = useCallback(() => {
@@ -350,7 +364,7 @@ export function ProjectSidebar({ onOpenBranding, onOpenWalkthrough }: ProjectSid
               className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm hover:bg-accent/50 transition-colors"
               onClick={() => {
                 if (project) {
-                  router.push(`/viewer/${project.shareSlug || project.id}`);
+                  router.push(project.isPublic && project.shareSlug ? `/tour/${project.shareSlug}` : `/viewer/${project.id}`);
                 }
               }}
             >
