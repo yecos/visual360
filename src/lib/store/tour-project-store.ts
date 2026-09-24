@@ -387,7 +387,11 @@ export const useTourProjectStore = create<TourProjectState>()(
         set({
           project: {
             ...project,
-            branding: { ...project.branding, ...updates },
+            branding: {
+              primaryColor: project.branding?.primaryColor ?? '#3B82F6',
+              ...project.branding,
+              ...updates,
+            },
           },
         });
 
@@ -401,7 +405,13 @@ export const useTourProjectStore = create<TourProjectState>()(
         set({
           project: {
             ...project,
-            walkthrough: { ...project.walkthrough, ...updates },
+            walkthrough: {
+              pointIds: project.walkthrough?.pointIds ?? [],
+              autoplay: project.walkthrough?.autoplay ?? false,
+              interval: project.walkthrough?.interval ?? 5,
+              ...project.walkthrough,
+              ...updates,
+            },
           },
         });
 

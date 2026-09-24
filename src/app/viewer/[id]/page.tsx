@@ -29,7 +29,7 @@ export default function ViewerPage() {
         if (!savedProject) {
           const { listProjects } = await import('@/lib/storage');
           const allProjects = await listProjects();
-          savedProject = allProjects.find((p) => p.shareSlug === slug) || null;
+          savedProject = allProjects.find((p) => p.shareSlug === slug);
         }
 
         if (savedProject) {

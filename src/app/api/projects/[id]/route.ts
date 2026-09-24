@@ -1,44 +1,34 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { db } from "@/lib/db";
+import {
+  getSessionUserId,
+  projectInclude,
+  toClientProject,
+} from "@/lib/project-server";
+import { updateProjectForUser } from "@/lib/project-write";
 
-const projectInclude = {
-  floors: {
-    include: {
-      points: {
-        include: {
-          fromConnections: true,
-          toConnections: true,
-        },
-      },
-    },
-    orderBy: { order: "asc" as const },
-  },
-  branding: true,
-  walkthrough: true,
-};
-
-/**
- * GET /api/projects/[id] — Get a project by ID with all relations
- */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
-    const project = await db.tourProject.findUnique({
-      where: { id },
+    const project = await db.tourProject.findFirst({
+      where: { id, userId },
       include: projectInclude,
     });
 
     if (!project) {
-      return NextResponse.json(
-        { error: "Project not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    return NextResponse.json(project);
+    return NextResponse.json(toClientProject(project));
   } catch (error) {
     console.error("Error fetching project:", error);
     return NextResponse.json(
@@ -48,42 +38,33 @@ export async function GET(
   }
 }
 
-/**
- * PUT /api/projects/[id] — Update a project by ID
- */
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
     const body = await request.json();
+    const project = await updateProjectForUser(id, body, userId);
 
-    // Check project exists
-    const existing = await db.tourProject.findUnique({ where: { id } });
-    if (!existing) {
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(toClientProject(project));
+  } catch (error) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "Project not found" },
-        { status: 404 }
+        { error: "Invalid project payload", issues: error.issues },
+        { status: 400 }
       );
     }
 
-    const { name, description, thumbnail, isPublic, shareSlug } = body;
-    const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.name = name.trim();
-    if (description !== undefined) updateData.description = description?.trim() || null;
-    if (thumbnail !== undefined) updateData.thumbnail = thumbnail || null;
-    if (isPublic !== undefined) updateData.isPublic = isPublic;
-    if (shareSlug !== undefined) updateData.shareSlug = shareSlug || null;
-
-    const project = await db.tourProject.update({
-      where: { id },
-      data: updateData,
-      include: projectInclude,
-    });
-
-    return NextResponse.json(project);
-  } catch (error) {
     console.error("Error updating project:", error);
     return NextResponse.json(
       { error: "Failed to update project" },
@@ -92,28 +73,26 @@ export async function PUT(
   }
 }
 
-/**
- * DELETE /api/projects/[id] — Delete a project by ID
- */
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { id } = await params;
+    const result = await db.tourProject.deleteMany({
+      where: { id, userId },
+    });
 
-    // Check project exists
-    const existing = await db.tourProject.findUnique({ where: { id } });
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Project not found" },
-        { status: 404 }
-      );
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    await db.tourProject.delete({ where: { id } });
-
-    return NextResponse.json({ message: "Project deleted successfully" });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error deleting project:", error);
     return NextResponse.json(

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -16,11 +16,13 @@ model TourProject {
   shareSlug   String?  @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   floors      Floor[]
   branding    Branding?
   walkthrough Walkthrough?
+
+  @@index([userId, updatedAt])
 }
 
 model Floor {
@@ -31,22 +33,26 @@ model Floor {
   projectId String
   project   TourProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   points    TourPoint[]
+
+  @@index([projectId, order])
 }
 
 model TourPoint {
-  id           String   @id @default(cuid())
-  name         String
-  x            Float
-  y            Float
-  panoramaUrl  String
-  panoramaType String   @default("image")
-  pitch        Float    @default(0)
-  yaw          Float    @default(0)
-  fov          Float    @default(75)
-  floorId      String
-  floor        Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  name            String
+  x               Float
+  y               Float
+  panoramaUrl     String
+  panoramaType    String       @default("image")
+  pitch           Float        @default(0)
+  yaw             Float        @default(0)
+  fov             Float        @default(75)
+  floorId         String
+  floor           Floor        @relation(fields: [floorId], references: [id], onDelete: Cascade)
   fromConnections Connection[] @relation("FromConnections")
   toConnections   Connection[] @relation("ToConnections")
+
+  @@index([floorId])
 }
 
 model Connection {
@@ -55,25 +61,28 @@ model Connection {
   toId      String
   fromPoint TourPoint @relation("FromConnections", fields: [fromId], references: [id], onDelete: Cascade)
   toPoint   TourPoint @relation("ToConnections", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+  @@index([toId])
 }
 
 model Branding {
-  id           String   @id @default(cuid())
+  id           String      @id @default(cuid())
   logo         String?
-  primaryColor String   @default("#3B82F6")
+  primaryColor String      @default("#3B82F6")
   companyName  String?
   contactInfo  String?
-  projectId    String   @unique
+  projectId    String      @unique
   project      TourProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Walkthrough {
-  id           String   @id @default(cuid())
-  pointIds     String   @default("[]")
-  autoplay     Boolean  @default(false)
-  interval     Int      @default(5)
+  id           String      @id @default(cuid())
+  pointIds     String      @default("[]")
+  autoplay     Boolean     @default(false)
+  interval     Int         @default(5)
   narrationUrl String?
-  projectId    String   @unique
+  projectId    String      @unique
   project      TourProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
@@ -103,14 +112,17 @@ model Account {
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
-  id           String  @id @default(cuid())
-  sessionToken String  @unique
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {

@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTourProjectStore } from '@/lib/store/tour-project-store';
-import { fileToBase64, base64ToDataURL, saveFile } from '@/lib/storage';
+import { saveFile } from '@/lib/storage';
 
 interface BrandingPanelProps {
   onClose: () => void;
@@ -26,10 +26,8 @@ export function BrandingPanel({ onClose }: BrandingPanelProps) {
       if (!file || !project) return;
 
       try {
-        const base64 = await fileToBase64(file);
-        const dataUrl = base64ToDataURL(base64, file.type);
-        await saveFile(project.id, 'branding-logo', base64, file.type, file.name);
-        updateBranding({ logo: dataUrl });
+        const logo = await saveFile(project.id, 'branding-logo', file);
+        updateBranding({ logo });
       } catch (error) {
         console.error('Failed to upload logo:', error);
       }

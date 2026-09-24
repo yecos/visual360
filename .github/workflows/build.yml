@@ -1,0 +1,27 @@
+name: Build verification
+
+on:
+  push:
+    branches:
+      - visual360-premium-v1
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/visual360
+      NEXTAUTH_SECRET: ci-build-secret-ci-build-secret
+      NEXTAUTH_URL: http://localhost:3000
+      BLOB_READ_WRITE_TOKEN: ci-placeholder
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npx prisma generate
+      - run: npm run build

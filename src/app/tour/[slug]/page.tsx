@@ -24,44 +24,43 @@ interface TourPointDB {
   pitch: number;
   yaw: number;
   fov: number;
-  fromConnections: { id: string; fromId: string; toId: string }[];
-  toConnections: { id: string; fromId: string; toId: string }[];
 }
 
 interface FloorDB {
   id: string;
   name: string;
   order: number;
-  planImage: string | null;
+  planImage?: string;
   points: TourPointDB[];
+  connections: { id: string; fromId: string; toId: string }[];
 }
 
 interface BrandingDB {
-  id: string;
-  logo: string | null;
+  id?: string;
+  logo?: string;
   primaryColor: string;
-  companyName: string | null;
-  contactInfo: string | null;
+  companyName?: string;
+  contactInfo?: string;
 }
 
 interface WalkthroughDB {
-  id: string;
-  pointIds: string;
+  id?: string;
+  pointIds: string[];
   autoplay: boolean;
   interval: number;
-  narrationUrl: string | null;
+  narrationUrl?: string;
 }
 
 interface TourData {
   id: string;
   name: string;
-  description: string | null;
-  thumbnail: string | null;
+  description?: string;
+  thumbnail?: string;
   isPublic: boolean;
-  shareSlug: string | null;
+  shareSlug?: string;
   floors: FloorDB[];
-  branding: BrandingDB | null;
-  walkthrough: WalkthroughDB | null;
+  branding?: BrandingDB;
+  walkthrough?: WalkthroughDB;
 }
 
 export default function TourPage() {
@@ -131,7 +130,13 @@ export default function TourPage() {
 
     // Add hotspots for connected points
     if (tourData) {
-      const allConnections = currentPoint.fromConnections;
+      const currentFloor = tourData.floors.find((floor) =>
+        floor.points.some((point) => point.id === currentPoint.id)
+      );
+      const allConnections =
+        currentFloor?.connections.filter(
+          (connection) => connection.fromId === currentPoint.id
+        ) ?? [];
       const hotspots: HotspotData[] = [];
 
       for (const conn of allConnections) {

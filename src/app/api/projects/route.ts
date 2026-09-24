@@ -1,33 +1,27 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { db } from "@/lib/db";
+import {
+  getSessionUserId,
+  projectInclude,
+  toClientProject,
+} from "@/lib/project-server";
+import { createProjectForUser } from "@/lib/project-write";
 
-const projectInclude = {
-  floors: {
-    include: {
-      points: {
-        include: {
-          fromConnections: true,
-          toConnections: true,
-        },
-      },
-    },
-    orderBy: { order: "asc" as const },
-  },
-  branding: true,
-  walkthrough: true,
-};
-
-/**
- * GET /api/projects — List all projects with relations
- */
 export async function GET() {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const projects = await db.tourProject.findMany({
+      where: { userId },
       include: projectInclude,
       orderBy: { updatedAt: "desc" },
     });
 
-    return NextResponse.json(projects);
+    return NextResponse.json(projects.map(toClientProject));
   } catch (error) {
     console.error("Error fetching projects:", error);
     return NextResponse.json(
@@ -37,53 +31,24 @@ export async function GET() {
   }
 }
 
-/**
- * POST /api/projects — Create a new project
- */
 export async function POST(request: Request) {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
-    const { name, description, thumbnail, isPublic, shareSlug, userId } = body;
-
-    if (!name || typeof name !== "string" || name.trim().length === 0) {
+    const project = await createProjectForUser(body, userId);
+    return NextResponse.json(toClientProject(project), { status: 201 });
+  } catch (error) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "Project name is required" },
+        { error: "Invalid project payload", issues: error.issues },
         { status: 400 }
       );
     }
 
-    const project = await db.tourProject.create({
-      data: {
-        name: name.trim(),
-        description: description?.trim() || null,
-        thumbnail: thumbnail || null,
-        isPublic: isPublic ?? false,
-        shareSlug: shareSlug || null,
-        userId: userId || null,
-        floors: {
-          create: {
-            name: "Floor 1",
-            order: 0,
-          },
-        },
-        branding: {
-          create: {
-            primaryColor: "#3B82F6",
-          },
-        },
-        walkthrough: {
-          create: {
-            pointIds: "[]",
-            autoplay: false,
-            interval: 5,
-          },
-        },
-      },
-      include: projectInclude,
-    });
-
-    return NextResponse.json(project, { status: 201 });
-  } catch (error) {
     console.error("Error creating project:", error);
     return NextResponse.json(
       { error: "Failed to create project" },

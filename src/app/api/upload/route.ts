@@ -1,61 +1,102 @@
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
-import { saveUploadedFile } from "@/lib/storage-server";
+import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/project-server";
 
-const ALLOWED_IMAGE_TYPES = [
+const ALLOWED_TYPES = new Set([
   "image/jpeg",
-  "image/jpg",
   "image/png",
   "image/webp",
-];
+  "image/avif",
+  "video/mp4",
+]);
 
-const ALLOWED_VIDEO_TYPES = ["video/mp4"];
+const DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024;
 
-const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+function safeFileName(name: string) {
+  return name
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 120);
+}
 
-const DEFAULT_MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
-/**
- * POST /api/upload — Upload a file
- */
 export async function POST(request: Request) {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      { error: "Blob storage is not configured" },
+      { status: 503 }
+    );
+  }
+
   try {
     const formData = await request.formData();
-    const file = formData.get("file") as File | null;
+    const file = formData.get("file");
+    const projectId = formData.get("projectId");
+    const assetKey = formData.get("assetKey");
 
-    if (!file) {
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    if (typeof projectId !== "string" || !projectId) {
+      return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+    }
+
+    const ownsProject = await db.tourProject.findFirst({
+      where: { id: projectId, userId },
+      select: { id: true },
+    });
+
+    if (!ownsProject) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    if (!ALLOWED_TYPES.has(file.type)) {
       return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
+        { error: "Unsupported file type" },
+        { status: 415 }
       );
     }
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        {
-          error: `Invalid file type: ${file.type}. Allowed types: ${ALLOWED_TYPES.join(", ")}`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate file size
     const maxFileSize = process.env.MAX_FILE_SIZE
-      ? parseInt(process.env.MAX_FILE_SIZE, 10)
+      ? Number.parseInt(process.env.MAX_FILE_SIZE, 10)
       : DEFAULT_MAX_FILE_SIZE;
 
-    if (file.size > maxFileSize) {
+    if (!Number.isFinite(maxFileSize) || file.size > maxFileSize) {
       return NextResponse.json(
-        {
-          error: `File size exceeds maximum allowed size of ${maxFileSize / (1024 * 1024)}MB`,
-        },
-        { status: 400 }
+        { error: "File exceeds the configured size limit" },
+        { status: 413 }
       );
     }
 
-    const url = await saveUploadedFile(file);
+    const key =
+      typeof assetKey === "string" && assetKey.trim()
+        ? safeFileName(assetKey.trim())
+        : "asset";
+    const fileName = safeFileName(file.name || "upload");
+    const pathname = `visual360/${userId}/${projectId}/${key}-${fileName}`;
 
-    return NextResponse.json({ url }, { status: 201 });
+    const blob = await put(pathname, file, {
+      access: "public",
+      addRandomSuffix: true,
+      multipart: file.size > 4 * 1024 * 1024,
+    });
+
+    return NextResponse.json(
+      {
+        url: blob.url,
+        pathname: blob.pathname,
+        contentType: file.type,
+        size: file.size,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error uploading file:", error);
     return NextResponse.json(
